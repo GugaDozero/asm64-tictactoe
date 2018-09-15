@@ -1,5 +1,4 @@
 section .bss
-    game_position_pointer resq 9
     key resb 1
     garbage resb 1    ; trash from stdin (\n)
 
@@ -39,9 +38,7 @@ section .text
     global _start 
     
 _start:
-    nop
-    call set_game_pos_pointer
-    
+nop
 main_loop:
     call clear_screen
     
@@ -67,8 +64,7 @@ main_loop:
     
     mov rsi, game_draw
     mov rdx, gd_size
-    ;mov rsi, game_position_pointer
-    ;mov rdx, 9*8
+
     call print
     
     mov rsi, new_line
@@ -79,11 +75,14 @@ main_loop:
     mov rdx, tm_size
     call print
     
-    call read_keyboard               ; Vamos ler a posição que o usuário vai passar
+    .repeat_read:
+        call read_keyboard               ; Vamos ler a posição que o usuário vai passar
+    
+    cmp rax, 0
+    je .repeat_read
     
     mov al, [key]
-    sub al, 49                       ; 49 equivale a "1" em ASCII, eu faço essa subtração porque eu quero converter ASCII para inteiro, ao mesmo tempo que faço subtraio de 1 o valor inteiro
-    
+    sub al, 48                       ; 48 equivale a "0" em ASCII, eu faço essa subtração porque eu quero converter ASCII para inteiro
     
     call update_draw
     
@@ -116,7 +115,7 @@ read_keyboard:
     syscall
     
     cmp byte[key], 0x0A
-    jz flush_end
+    jz read_end
     
     mov rdi, 0
     mov rsi, garbage
@@ -127,10 +126,10 @@ read_keyboard:
         syscall
         
         cmp byte[garbage], 0x0A
-        jz flush_end
+        jz read_end
         jmp flush_loop
-    
-    flush_end:
+        
+    read_end:
     
     ret
     
@@ -140,26 +139,76 @@ clear_screen:
     call print
     ret
     
-set_game_pos_pointer:
-    mov rsi, game_draw
-    mov rbx, game_position_pointer
-    
-    mov rcx, 9
-    
-    loop_1:
-        mov [rbx], rsi
-        add rsi, 2
-        
-        inc rbx
-        loop loop_1
-        
-        
-        
-    ret
-    
 update_draw:
-    mov rbx, [game_position_pointer + rax]
     
+    cmp rax, 1
+    je first_pos
+    
+    cmp rax, 2
+    je second_pos
+    
+    cmp rax, 3
+    je third_pos
+    
+    cmp rax, 4
+    je fourth_pos
+    
+    cmp rax, 5 
+    je fifith_pos
+    
+    cmp rax, 6
+    je sixth_pos
+    
+    cmp rax, 7
+    je seventh_pos
+    
+    cmp rax, 8
+    je eighth_pos
+    
+    cmp rax, 9
+    je nineth_pos
+    
+    jmp end_update 
+    
+    first_pos:
+        mov rax, 0
+        jmp continue_update
+        
+    second_pos:
+        mov rax, 2
+        jmp continue_update
+        
+    third_pos:
+        mov rax, 4
+        jmp continue_update
+        
+    fourth_pos:
+        mov rax, 6
+        jmp continue_update
+        
+    fifith_pos:
+        mov rax, 8
+        jmp continue_update
+    
+    sixth_pos:
+        mov rax, 10
+        jmp continue_update
+        
+    seventh_pos:
+        mov rax, 12
+        jmp continue_update
+    
+    eighth_pos:
+        mov rax, 14
+        jmp continue_update
+        
+    nineth_pos:
+        mov rax, 16
+        jmp continue_update
+        
+    continue_update:
+
+    lea rbx, [game_draw + rax]
     
     mov rsi, player
     
@@ -180,6 +229,8 @@ update_draw:
     update:
         mov [rbx], cl
     
+    end_update:
+    
     ret
     
 check:
@@ -196,7 +247,7 @@ check_line:
         
         cmp rcx, 1
         je second_line
-        
+    
         cmp rcx, 2
         je third_line
         
@@ -208,28 +259,31 @@ check_line:
             jmp do_check_line
         
         second_line:
-            mov rsi, 3
+            mov rsi, 6
             jmp do_check_line
             
         third_line:
-            mov rsi, 6
+            mov rsi, 12 
             jmp do_check_line
             
         do_check_line:
             inc rcx
             
-            mov rbx, [game_position_pointer + rsi]
-            mov al, [rbx]
+            lea rbx, [game_draw + rsi]
+            
+            mov al, [ebx]
             cmp al, "_"
             je check_line_loop
             
-            inc rsi
-            mov rbx, [game_position_pointer + rsi]
+            add rsi, 2
+            lea rbx, [game_draw + rsi]
+
             cmp al, [rbx]
             jne check_line_loop
             
-            inc rsi
-            mov rbx, [game_position_pointer + rsi]
+            add rsi, 2
+            lea rbx, [game_draw + rsi]
+            
             cmp al, [rbx]
             jne check_line_loop
             
@@ -257,28 +311,31 @@ check_column:
             jmp do_check_column
             
         second_column:
-            mov rsi, 1
+            mov rsi, 2
             jmp do_check_column
             
         third_column:
-            mov rsi, 2
+            mov rsi, 4
             jmp do_check_column
             
         do_check_column:
             inc rcx
             
-            mov rbx, [game_position_pointer + rsi]
+            lea rbx, [game_draw + rsi]
+            
             mov al, [rbx]
             cmp al, "_"
             je check_colum_loop
             
-            add rsi, 3
-            lea rbx, [game_position_pointer + rsi]
+            add rsi, 6
+            lea rbx, [game_draw + rsi]
+            
             cmp al, [rbx]
             jne check_colum_loop
             
-            add rsi, 3
-            mov rbx, [game_position_pointer + rsi]
+            add rsi, 6
+            lea rbx, [game_draw + rsi]
+            
             cmp al, [rbx]
             jne check_colum_loop
             
@@ -299,29 +356,32 @@ check_diagonal:
         
     first_diagonal:
         mov rsi, 0
-        mov rdx, 4          ; tamanho do pulo que vamos dar para o meio da diagonal 
+        mov rdx, 8          ; tamanho do pulo que vamos dar para o meio da diagonal 
         jmp do_check_diagonal
         
     second_diagonal:
-        mov rsi, 2
-        mov rdx, 2
+        mov rsi, 4
+        mov rdx, 4
         jmp do_check_diagonal
         
     do_check_diagonal:
         inc rcx
         
-        mov rbx, [game_position_pointer + rsi]
+        lea rbx, [game_draw + rsi]
+        
         mov al, [rbx]
         cmp al, "_"
         je check_diagonal_loop
         
         add rsi, rdx
-        mov rbx, [game_position_pointer + rsi]
+        lea rbx, [game_draw + rsi]
+        
         cmp al, [rbx]
         jne check_diagonal_loop
         
         add rsi, rdx
-        mov rbx, [game_position_pointer + rsi]
+        lea rbx, [game_draw + rsi]
+        
         cmp al, [rbx]
         jne check_diagonal_loop
         
