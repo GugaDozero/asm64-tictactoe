@@ -25,7 +25,10 @@ section .data
     player_message db "JOGADOR ", 0
     pm_size equ $-player_message
     
-    win_message db " GANHOU!", 0
+    overlap_message db "POSICAO OCUPADA, ESCOLHA OUTRA", 10, 0
+    om_size equ $-overlap_message
+
+    win_message db " GANHOU!", 10, 0
     wm_size equ $-win_message
     
     type_message db "ENTRE COM UMA POSICAO NO TABULEIRO: ", 0
@@ -70,6 +73,8 @@ main_loop:
     mov rsi, new_line
     mov rdx, nl_size
     call print
+
+    request_input:
     
     mov rsi, type_message
     mov rdx, tm_size
@@ -210,6 +215,10 @@ update_draw:
 
     lea rbx, [game_draw + rax]
     
+    mov al, [rbx]
+    cmp al, "_"
+    jne request_again
+
     mov rsi, player
     
     cmp byte[rsi], "0"
@@ -232,7 +241,14 @@ update_draw:
     end_update:
     
     ret
-    
+
+request_again:
+    mov rsi, overlap_message
+    mov rdx, om_size
+    call print
+
+    jmp request_input
+
 check:
     call check_line
     ret
